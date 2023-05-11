@@ -2,9 +2,12 @@
 
 from stanfordcorenlp import StanfordCoreNLP
 import sexpdata
+import sys
+from nltk.grammar import CFG
+from nltk.parse import generate
 
 # Start the Stanford CoreNLP client.
-nlp = StanfordCoreNLP('http://localhost', port=9000)
+# nlp = StanfordCoreNLP('http://localhost', port=9000)
 
 # Custom types.
 Rules = dict[str, list[list[str]]]
@@ -82,24 +85,45 @@ def generate_grammar_rules(sentences: list[str]) -> str:
 
     return convert_rules_to_grammar_string(rules)
 
-def read_phrase_structure_corpus(filename: list) -> list[str]:
+def read_phrase_structure_corpus(filename: str) -> list[str]:
     """
     Read the given filename parameter line by line and returns a list of all the
     words in the file.
     """
-    pass
+    return [line.strip() for line in open(filename, 'r').readlines()]
+    
 
-def read_lexical_corpus(filename: list) -> list[str]:
+def read_lexical_corpus(filename: str) -> list[str]:
     """
     Read the given filename parameter line by line and returns a list of all the
     words in the file.
     """
-    pass
+    with open(filename, 'r') as file: 
+        corpus = []
+        for line in file:
+            words = line.split(',')
+            for word in words:
+                corpus.append(word.strip())
+        return corpus
 
 def main():
     # 1. Read the input filenames its contents.
-    phrase_structure_corpus = read_phrase_structure_corpus('./foxinsocks.txt')
-    lexical_corpus = read_lexical_corpus('./homophones.txt')
+    if len(sys.argv) < 3:
+        print('Usage: ./main.py FILEPATH1 FILEPATH2')
+        sys.exit(1)
+        
+    phrase_structure_corpus = read_phrase_structure_corpus(sys.argv[1])
+    lexical_corpus = read_lexical_corpus(sys.argv[2])
+    
+    phrase_structure_grammar_rules = generate_grammar_rules(phrase_structure_corpus)['phrase_structure_rules']
+    lexical_grammar_rules = generate_grammar_rules(lexical_corpus)['lexical_rules']
+    
+    grammar = CFG.fromstring(f'{phrase_structure_grammar_rules} \n {lexical_grammar_rules}')
+    for sentence in generate(grammar, n=3):
+        print(sentence)
+
+
+
 
 if __name__ == '__main__':
     main()
