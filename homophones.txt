@@ -105,7 +105,7 @@ Cellar,Seller
 Jibe,Gibe
 Bite,Byte,Bight
 Defused,Diffused
-Metal,Mettle,Meddle —
+Metal,Mettle,Meddle
 Flower,Flour
 Faun,Fawn
 Hey,Hay
@@ -419,7 +419,7 @@ Effects,Affects
 Mowed,Mode
 Parlay,Parley
 Heed,He’d
-Medal,Metal,Mettle —
+Medal,Metal,Mettle
 Hire,Higher
 Flew,Flu,Flue
 Piece,Peace
