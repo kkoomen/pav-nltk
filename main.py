@@ -11,7 +11,7 @@ Rules = dict[str, list[list[str]]]
 
 def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
     """
-    Parse a given S-string tree, loaded by the sexpdata module.
+    Parse a given S-expression tree, loaded by the sexpdata module.
 
     :param tree: A list of symbols, representing the parse tree.
     :param rules: Dictionary containing all the rules.
@@ -40,9 +40,9 @@ def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
 
 def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
     """
-    Extract all the rules, given an S-string nltk parse tree.
+    Extract all the rules, given an S-expression nltk parse tree.
 
-    :param parse_tree_str: The S-string parse tree.
+    :param parse_tree_str: The S-expression parse tree.
     :param rules: Dictionary containing all the rules.
     """
     parse_tree = sexpdata.loads(parse_tree_str)[1]
