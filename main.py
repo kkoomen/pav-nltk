@@ -48,26 +48,31 @@ def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
     parse_tree = sexpdata.loads(parse_tree_str)[1]
     parse_tree_to_rules(parse_tree, rules)
 
-def generate_grammar_rules(sentences: list[str]):
+def convert_rules_to_grammar_string(rules: Rules) -> str:
+    grammar_string = ''
+
+    for lhs, rhs_list in rules.items():
+        for rhs in rhs_list:
+            grammar_string += f"{lhs} -> {' '.join(rhs)}\n"
+
+    return grammar_string
+
+def generate_grammar_rules(sentences: list[str]) -> str:
     """
     Generate all the grammar rules for a list of sentences.
 
     :param sentences: The list of sentences to generate the grammar for.
     """
     rules = {}
+
     for sentence in sentences:
         # Perform the constituent parsing and obtain parse tree as a string
-        parse_tree_str = nlp.parse(sentence)
+        parse_tree_str = nlp.parse(sentence.lower())
 
         # Extract grammar rules from the parse tree string.
         extract_rules_from_tree(parse_tree_str, rules)
 
-    grammar_string = ""
-    for lhs, rhs_list in rules.items():
-        for rhs in rhs_list:
-            grammar_string += f"{lhs} -> {' '.join(rhs)}\n"
-
-    return grammar_string
+    return convert_rules_to_grammar_string(rules)
 
 def read_phrase_structure_corpus(filename: list) -> list[str]:
     """
