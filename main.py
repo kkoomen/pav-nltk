@@ -26,7 +26,7 @@ def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
 
         # Append all the RHS labels to the current LHS.
         rhs = [str(symbol[0]) for symbol in tree[1:] if not isinstance(symbol, sexpdata.Symbol)]
-        if len(rhs):
+        if len(rhs) and rhs not in rules[lhs]:
             rules[lhs].append(rhs)
 
     for child in tree[1:]:
