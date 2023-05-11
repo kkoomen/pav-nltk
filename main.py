@@ -1,42 +1,92 @@
 #!/usr/bin/env python3
 
-def read_corpus(filename):
+from stanfordcorenlp import StanfordCoreNLP
+import sexpdata
+
+# Start the Stanford CoreNLP client.
+nlp = StanfordCoreNLP('http://localhost', port=9000)
+
+# Custom types.
+Rules = dict[str, list[list[str]]]
+
+def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
+    """
+    Parse a given S-string tree, loaded by the sexpdata module.
+
+    :param tree: A list of symbols, representing the parse tree.
+    :param rules: Dictionary containing all the rules.
+    """
+    if isinstance(tree, sexpdata.Symbol):
+        return str(tree)
+
+    lhs = str(tree[0])
+
+    if lhs not in rules:
+        rules[lhs] = []
+
+        # Append all the RHS labels to the current LHS.
+        rhs = [str(symbol[0]) for symbol in tree[1:] if not isinstance(symbol, sexpdata.Symbol)]
+        if len(rhs):
+            rules[lhs].append(rhs)
+
+    for child in tree[1:]:
+        if isinstance(child, sexpdata.Symbol):
+            # At this point we reached a leaf node.
+            leaf_node_value = str(child)
+            if [leaf_node_value] not in rules[lhs]:
+                rules[lhs].append([leaf_node_value])
+        else:
+            parse_tree_to_rules(child, rules)
+
+def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
+    """
+    Extract all the rules, given an S-string nltk parse tree.
+
+    :param parse_tree_str: The S-string parse tree.
+    :param rules: Dictionary containing all the rules.
+    """
+    parse_tree = sexpdata.loads(parse_tree_str)[1]
+    parse_tree_to_rules(parse_tree, rules)
+
+def generate_grammar_rules(sentences: list[str]):
+    """
+    Generate all the grammar rules for a list of sentences.
+
+    :param sentences: The list of sentences to generate the grammar for.
+    """
+    rules = {}
+    for sentence in sentences:
+        # Perform the constituent parsing and obtain parse tree as a string
+        parse_tree_str = nlp.parse(sentence)
+
+        # Extract grammar rules from the parse tree string.
+        extract_rules_from_tree(parse_tree_str, rules)
+
+    grammar_string = ""
+    for lhs, rhs_list in rules.items():
+        for rhs in rhs_list:
+            grammar_string += f"{lhs} -> {' '.join(rhs)}\n"
+
+    return grammar_string
+
+def read_phrase_structure_corpus(filename: list) -> list[str]:
     """
     Read the given filename parameter line by line and returns a list of all the
     words in the file.
     """
     pass
 
-def tag_corpus(corpus):
+def read_lexical_corpus(filename: list) -> list[str]:
     """
-    Use NLTK to tag the corpus.
+    Read the given filename parameter line by line and returns a list of all the
+    words in the file.
     """
-    pass
-
-def generate_rules(tagged_corpus):
-    pass
-
-def generate_grammar(rules):
-    pass
-
-def generate_sentence(grammar):
     pass
 
 def main():
-    # 1. foxinsocks.txt inlezen
-    corpus = read_corpus('./foxinsocks.txt')
-
-    # 2. Gebruik NLTK package om de corpus te taggen.
-    tagged_corpus = tag_corpus(corpus)
-
-    # 3. Lexicon & Phrase structure rules opstellen (NLTK laten doen)
-    rules = generate_rules(tagged_corpus)
-    grammar = generate_grammar(rules)
-
-    # 4. Generate sentences given the grammar
-    sentence = generate_sentence(grammar)
-
-    # 5. Print the sentence.
+    # 1. Read the input filenames its contents.
+    phrase_structure_corpus = read_phrase_structure_corpus('./foxinsocks.txt')
+    lexical_corpus = read_lexical_corpus('./homophones.txt')
 
 if __name__ == '__main__':
     main()
