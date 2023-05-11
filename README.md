@@ -14,9 +14,12 @@ CoreNLP. In python gebruiken we een wrapper package die de API aanroept die je
 lokaal hebt draaien, maar deze moet je dus installeren. Installeer CoreNLP v4
 [hier](https://stanfordnlp.github.io/CoreNLP).
 
-Nadat je CoreNLP hebt geïnstalleerd moet je in een terminal naar de lokatie gaan
-waar je CoreNLP heb gedownload. Vervolgens kan je het onderstaande commando
-draaien om een server te starten op port `9000`:
+Om CoreNLP te draaien lokaal, heb je ook java nodig. Voor Mac gebruiker kan je
+simpelweg het volgende commando draaien: `brew install openjdk`
+
+Nadat je Java en CoreNLP hebt geïnstalleerd moet je in een terminal naar de
+lokatie gaan waar je CoreNLP heb gedownload. Vervolgens kan je het onderstaande
+commando draaien om een server te starten op port `9000`:
 
 ```
 java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,pos,parse" -port 9000 -timeout 30000
