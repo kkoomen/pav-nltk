@@ -49,6 +49,13 @@ def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
     parse_tree_to_rules(parse_tree, rules)
 
 def convert_rules_to_grammar_string(rules: Rules) -> str:
+    """
+    Convert a dictionary of rules to a grammar string, which can be used for any
+    nltk grammar .tostring() function.
+
+    :param rules: The rules dictionary.
+    :return: The grammar string.
+    """
     grammar_string = ''
 
     for lhs, rhs_list in rules.items():
@@ -62,6 +69,7 @@ def generate_grammar_rules(sentences: list[str]) -> str:
     Generate all the grammar rules for a list of sentences.
 
     :param sentences: The list of sentences to generate the grammar for.
+    :return: The grammar string.
     """
     rules = {}
 
