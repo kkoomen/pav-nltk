@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import json
+from nltk.probability import random
+from nltk.tokenize.punkt import string
 from stanfordcorenlp import StanfordCoreNLP
 import sexpdata
 import sys
@@ -11,9 +14,10 @@ import re
 nlp = StanfordCoreNLP('http://localhost', port=9000)
 
 # Custom types.
-Rules = dict[str, dict[str,list[list[str]]]]
+Rules = dict[str, list[list[str]]]
+RuleGroups = dict[str, Rules]
 
-def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
+def parse_tree_to_rules(tree: list[sexpdata.Symbol], rule_groups: RuleGroups):
     """
     Parse a given S-expression tree, loaded by the sexpdata module.
 
@@ -23,34 +27,30 @@ def parse_tree_to_rules(tree: list[sexpdata.Symbol], rules: Rules):
     if isinstance(tree, sexpdata.Symbol):
         return str(tree)
 
-    lhs = re.sub(r'[^\w\d]+', '', str(tree[0]))
+    lhs = get_constituent_label(str(tree[0]))
 
     if len(tree) > 1:
-        if isinstance(tree[1], list) and lhs not in rules['phrase_structure_rules']:
-            rules['phrase_structure_rules'][lhs] = []
+        if isinstance(tree[1], list):
+            if lhs not in rule_groups['phrase_structure_rules']:
+                rule_groups['phrase_structure_rules'][lhs] = []
 
-            # Append all the RHS labels to the current LHS.
-            # not_allowed_rhs_pattern = re.compile(r'[^.,:]')
-            # and not_allowed_rhs_pattern.match(str(child[0]))
-            rhs = [str(child[0]) for child in tree[1:] if isinstance(child[0], sexpdata.Symbol)]
-            if len(rhs) and rhs not in rules['phrase_structure_rules'][lhs]:
-                rules['phrase_structure_rules'][lhs].append(rhs)
+            rhs = [get_constituent_label(str(child[0])) for child in tree[1:] if isinstance(child[0], sexpdata.Symbol)]
+            if len(rhs) and rhs not in rule_groups['phrase_structure_rules'][lhs]:
+                rule_groups['phrase_structure_rules'][lhs].append(rhs)
 
-        elif isinstance(tree[1], sexpdata.Symbol) and lhs not in rules['lexical_rules']:
-            rules['lexical_rules'][lhs] = []
-
-
+        elif not isinstance(tree[1], list) and lhs not in rule_groups['lexical_rules']:
+            rule_groups['lexical_rules'][lhs] = []
 
     for child in tree[1:]:
-        if isinstance(child, sexpdata.Symbol):
+        if not isinstance(child, list):
             # At this point we reached a leaf node.
-            leaf_node_value = str(child)
-            if [leaf_node_value] not in rules['lexical_rules'][lhs]:
-                rules['lexical_rules'][lhs].append([leaf_node_value])
+            leaf_node_value = f"'{child[0]}" if isinstance(child, sexpdata.Quoted) else str(child)
+            if [leaf_node_value] not in rule_groups['lexical_rules'][lhs]:
+                rule_groups['lexical_rules'][lhs].append([leaf_node_value])
         else:
-            parse_tree_to_rules(child, rules)
+            parse_tree_to_rules(child, rule_groups)
 
-def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
+def extract_rules_from_tree(parse_tree_str: str, rule_groups: RuleGroups):
     """
     Extract all the rules, given an S-expression nltk parse tree.
 
@@ -58,7 +58,7 @@ def extract_rules_from_tree(parse_tree_str: str, rules: Rules):
     :param rules: Dictionary containing all the rules.
     """
     parse_tree = sexpdata.loads(parse_tree_str)[1]
-    parse_tree_to_rules(parse_tree, rules)
+    parse_tree_to_rules(parse_tree, rule_groups)
 
 def convert_rules_to_grammar_string(rules: Rules, quote_rhs: bool) -> str:
     """
@@ -79,14 +79,13 @@ def convert_rules_to_grammar_string(rules: Rules, quote_rhs: bool) -> str:
 
             grammar_string += f"{lhs} -> {rhs_values}\n"
 
-    print("grammar_string >>>>", grammar_string)
     return grammar_string
 
-def generate_grammar_rules(sentences: list[str]) -> Rules:
+def generate_grammar_rules(items: list[str], is_wordlist=False) -> RuleGroups:
     """
     Generate all the grammar rules for a list of sentences.
 
-    :param sentences: The list of sentences to generate the grammar for.
+    :param items: The list of sentences or words to generate the grammar for.
     :return: The grammar string.
     """
     rules = {
@@ -94,24 +93,41 @@ def generate_grammar_rules(sentences: list[str]) -> Rules:
         'lexical_rules': {}
     }
 
-    for sentence in sentences:
-        # Perform the constituent parsing and obtain parse tree as a string
-        parse_tree_str = nlp.parse(sentence.lower())
-
-        # Extract grammar rules from the parse tree string.
-        extract_rules_from_tree(parse_tree_str, rules)
+    if is_wordlist:
+        for word in items:
+            result = json.loads(nlp.annotate(word))
+            for obj in result['sentences']:
+                # Extract grammar rules from the parse tree string.
+                extract_rules_from_tree(obj['parse'], rules)
+    else:
+        # list of sentences
+        result = json.loads(nlp.annotate('\n'.join(items)))
+        for obj in result['sentences']:
+            # Extract grammar rules from the parse tree string.
+            extract_rules_from_tree(obj['parse'], rules)
 
     return rules
 
-def filter_string(string: str) -> str:
-    return re.sub(r'[.,;!?]+', '', string).lower()
+def get_constituent_label(label: str) -> str:
+    """
+    Get a proper constituent label for a given production label.
+
+    :param label: production label coming from a parse tree.
+    :return: new constituent label.
+    """
+    if label in '!.?':
+        return 'TABSTOP'
+    elif label in string.punctuation:
+        return 'PUNC'
+    else:
+        return re.sub(r"[^\w\d']+", '', label)
 
 def read_phrase_structure_corpus(filename: str) -> list[str]:
     """
     Read the given filename parameter line by line and returns a list of all the
     words in the file.
     """
-    return [filter_string(line.strip()) for line in open(filename, 'r').readlines()]
+    return [line.strip().lower() for line in open(filename, 'r').readlines()]
 
 def read_lexical_corpus(filename: str) -> list[str]:
     """
@@ -123,41 +139,82 @@ def read_lexical_corpus(filename: str) -> list[str]:
         for line in file:
             words = line.split(',')
             for word in words:
-                corpus.append(filter_string(word.strip()))
+                corpus.append(word.strip().lower())
         return corpus
+
+def generate_samples(grammar, n: int) -> list[str]:
+    """
+    Generate n-sentences given a grammar.
+
+    :param grammar: grammar instance.
+    :param n: number which indicates the amount of sentence to generate.
+    :return: list of sentences induced from grammar.
+    """
+    sentences = []
+    for _ in range(n):
+        frags = []
+        generate_sample(grammar, grammar.start(), frags)
+        sentences.append(' '.join(frags))
+    return sentences
+
+def generate_sample(grammar, prod, frags):
+    """
+    Generate a random sentence given a grammar and some productions.
+
+    :param grammar: grammar instance.
+    :param prod list: production values.
+    :param frags list[str]: contains all the fragments for a single sentence.
+    """
+    if prod in grammar._lhs_index:
+        derivations = grammar._lhs_index[prod]
+        derivation = random.choice(derivations)
+        for d in derivation._rhs:
+            generate_sample(grammar, d, frags)
+    elif prod in grammar._rhs_index:
+        # terminal
+        frags.append(str(prod))
 
 def main():
     if len(sys.argv) < 3:
         print('Usage: ./main.py FILEPATH1 FILEPATH2')
         sys.exit(1)
 
-    print('Reading input files...')
+    print('='*80)
+    print('NLTK project, gemaakt door Kim Koomen en Gijs Schouten')
+    print('='*80)
+
+    print('- Reading input files...')
     phrase_structure_corpus = read_phrase_structure_corpus(sys.argv[1])
     lexical_corpus = read_lexical_corpus(sys.argv[2])
 
-    print('Parsing text and generating grammer rules, this might take a while...')
-    phrase_structure_grammar_rules = generate_grammar_rules(phrase_structure_corpus)['phrase_structure_rules']
-    lexical_grammar_rules = generate_grammar_rules(lexical_corpus)['lexical_rules']
+    print('- Parsing text and generating grammer rules, this might take a while...')
+    print('    - Starting to generate phrase structure grammar rules')
+    ps_rules = generate_grammar_rules(phrase_structure_corpus)
+    phrase_structure_grammar_rules = ps_rules['phrase_structure_rules']
 
+    print('    - Starting to generate lexical grammar rules')
+    lexical_grammar_rules = generate_grammar_rules(lexical_corpus, True)['lexical_rules']
+
+    # Regarding the third line in the array below, we're adding the words from
+    # the phrase structure corpus as a backup below the lexical corpus. This
+    # way, it fill first use the homophones and any leftover LHS productions
+    # will be expanded to those defined in the lexical rules of the corpus used
+    # for the phrase structure.
     grammar_string = '\n'.join([
         convert_rules_to_grammar_string(phrase_structure_grammar_rules, False),
         convert_rules_to_grammar_string(lexical_grammar_rules, True),
+        convert_rules_to_grammar_string(ps_rules['lexical_rules'], True),
     ])
 
-    print('Creating CFG from generated grammar rules...')
+    print('- Creating CFG from generated grammar rules...')
     grammar = CFG.fromstring(grammar_string)
 
-    print('Generating sentences...')
-    sentences = generate(grammar, n=3, depth=10)
-    if len(list(sentences)) == 0:
-        print('Unfortunately, no sentences were generated')
-        sys.exit(0)
+    print('- Generating sentences...')
+    sentences = generate_samples(grammar, n=10)
 
-    for sentence in sentences:
-        print(sentence)
-
-
-
+    print('\nDone! 🎉  Here are the generated sentences:')
+    for index, sentence in enumerate(sentences):
+        print(f'{index+1}) {sentence}')
 
 if __name__ == '__main__':
     main()
