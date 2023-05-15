@@ -22,7 +22,7 @@ lokatie gaan waar je CoreNLP heb gedownload. Vervolgens kan je het onderstaande
 commando draaien om een server te starten op port `9000`:
 
 ```
-java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,pos,parse" -port 9000 -timeout 30000
+java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,parse" -port 9000 -timeout 30000
 ```
 
 
