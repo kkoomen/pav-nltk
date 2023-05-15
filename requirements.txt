@@ -1,2 +1,3 @@
 stanfordcorenlp==3.9.1.1
 sexpdata==1.0.0
+nltk==3.8.1
