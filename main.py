@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import json
-from nltk.probability import random
+import random
 from nltk.tokenize.punkt import string
 from stanfordcorenlp import StanfordCoreNLP
 import sexpdata
