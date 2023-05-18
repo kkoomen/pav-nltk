@@ -142,6 +142,16 @@ def read_lexical_corpus(filename: str) -> list[str]:
                 corpus.append(word.strip().lower())
         return corpus
 
+def format_sentence(sentence: str) -> str:
+    """
+    Format a generated sentence by removing leading spaces before some
+    punctuation characters.
+
+    :param sentence: Generated sentence.
+    :return: Filtered sentence.
+    """
+    return re.sub(r" (\.|,|!|\?|')", "\\1", sentence)
+
 def generate_samples(grammar, n: int) -> list[str]:
     """
     Generate n-sentences given a grammar.
@@ -154,7 +164,7 @@ def generate_samples(grammar, n: int) -> list[str]:
     for _ in range(n):
         frags = []
         generate_sample(grammar, grammar.start(), frags)
-        sentences.append(' '.join(frags))
+        sentences.append(format_sentence(' '.join(frags)))
     return sentences
 
 def generate_sample(grammar, prod, frags):
@@ -186,6 +196,7 @@ def main():
     print('- Reading input files...')
     phrase_structure_corpus = read_phrase_structure_corpus(sys.argv[1])
     lexical_corpus = read_lexical_corpus(sys.argv[2])
+    sentences_to_generate = int(sys.argv[3]) if len(sys.argv) > 3 else 10
 
     print('- Parsing text and generating grammer rules, this might take a while...')
     print('    - Starting to generate phrase structure grammar rules')
@@ -210,7 +221,7 @@ def main():
     grammar = CFG.fromstring(grammar_string)
 
     print('- Generating sentences...')
-    sentences = generate_samples(grammar, n=10)
+    sentences = generate_samples(grammar, n=sentences_to_generate)
 
     print('\nDone! 🎉  Here are the generated sentences:')
     for index, sentence in enumerate(sentences):

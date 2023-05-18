@@ -32,16 +32,24 @@ Vervolgens kan je het project lokaal uitvoeren middels:
 ./main.py ./foxinsocks.txt ./homophones.txt
 ```
 
+Optioneel kan je nog een getal opgeven hoeveel zinnen het moet genereren. Om
+50 zinnen te genereren, gebruik het volgende commando:
+
+```
+./main.py ./foxinsocks.txt ./homophones.txt 50
+```
+
 Voor meer uitleg over het gebruik van de `main.py`, de structuur is als volgt:
 
 ```
-./main.py FILEPATH1 FILEPATH2
+./main.py FILEPATH1 FILEPATH2 N
 ```
 
 - `FILEPATH1` is een pad naar een corpus bestand dat gebuikt wordt voor de
   phrase structure rules. In dit project is dat `foxinsocks.txt`
-- `FILEPATH2` is ene pad naar een woordenlijst dat wordt gebruikt voor de
+- `FILEPATH2` is een pad naar een woordenlijst dat wordt gebruikt voor de
   lexical rules. In dit project is dat `homophones.txt`
+- `N` een getal dat aangeeft hoeveel zinnen er gegenereerd moeten worden.
 
 Voor dit project kan je dus simpelweg het volgend commando runnen:
 
