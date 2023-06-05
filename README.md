@@ -51,7 +51,7 @@ Voor meer uitleg over het gebruik van de `main.py`, de structuur is als volgt:
   lexical rules. In dit project is dat `homophones.txt`
 - `N` een getal dat aangeeft hoeveel zinnen er gegenereerd moeten worden.
 
-Voor dit project kan je dus simpelweg het volgend commando runnen:
+Voor dit project kan je dus simpelweg het volgende commando runnen:
 
 # Authors
 
